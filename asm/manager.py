@@ -254,6 +254,8 @@ class AsmManager:
         self.obs_ctr += 1
 
     def _op(self, opname: str, operands: list[int]):
+        if len(operands) == 0:
+            return
         self._writer.write('%s %s;\n' % (opname, concat(operands)))
 
     def annotation(self, name: str):

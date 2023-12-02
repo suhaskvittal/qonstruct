@@ -5,9 +5,9 @@
     Pre-written generation code.
 """
 
-from asm.manager import AsmManager
+from qonstruct.asm.manager import AsmManager
 
-import qecolor
+from qonstruct import qecolor
 
 def asm_hexagonal_color_code(output_file: str, distance: int, rounds: int, memory='z', use_flags=True):
     code = qecolor.make_hexagonal_tanner_graph(distance)
