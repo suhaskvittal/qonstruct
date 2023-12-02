@@ -16,8 +16,9 @@ def make_hgp_quantum_tanner_graph(seed_code: nx.Graph) -> nx.Graph:
             (1) data --> the data qubits of the code
             (2) x --> x stabilizers
             (3) z --> z stabilizers
-            (4) s --> all stabilizers
-            (4) prod_map --> maps bits/checks (i, j) to a vertex in the graph.
+            (4) checks --> all stabilizers
+            (5) obs_list --> {'x': x observables, 'z': z observables}
+            (6) prod_map --> maps bits/checks (i, j) to a vertex in the graph.
         Each vertex will have properties:
             (1) node_type --> one of 'data', 'x', or 'z'
             (2) prod --> a tuple (i, j) corresponding to vertices in the seed graph.
@@ -59,11 +60,17 @@ def make_hgp_quantum_tanner_graph(seed_code: nx.Graph) -> nx.Graph:
     gr.graph['data'] = data
     gr.graph['x'] = xstab
     gr.graph['z'] = zstab
-    gr.graph['s'] = all_stab
+    gr.graph['checks'] = all_stab
     gr.graph['prod_map'] = prod_map
+
+    x_obs_list, z_obs_list = get_observables(gr, seed_code)
+    gr.graph['obs_list'] = {'x': x_obs_list, 'z': z_obs_list}
     return gr
         
 def get_observables(hgp_code: nx.Graph, seed_code: nx.Graph) -> tuple[list[list[int]], list[list[int]]]:
+    """
+        This function computes the logical observables of the HGP code.
+    """
     H = ldpc.tanner_graph_to_parity_check_matrix(seed_code)
     Ht = H.T
     ker_H = ker(H)
@@ -119,12 +126,12 @@ def write_tanner_graph_file(seed_code: nx.Graph, output_file: str) -> None:
     gr = make_hgp_quantum_tanner_graph(seed_code)
     # Print code statistics
     print('data qubits: %d' % len(gr.graph['data']))
-    print('logical qubits: %d' % (len(gr.graph['data']) - len(gr.graph['s'])))
+    print('logical qubits: %d' % (len(gr.graph['data']) - len(gr.graph['checks'])))
     # Map data qubit nodes to indices.
     data_to_index = { d : i for (i, d) in enumerate(gr.graph['data']) }
     # Write stabilizers to the file.
     x_ctr, z_ctr = 0, 0
-    for s in gr.graph['s']:
+    for s in gr.graph['checks']:
         if gr.nodes[s]['node_type'] == 'x':
             writer.write('X%d' % x_ctr)
             x_ctr += 1
@@ -135,7 +142,7 @@ def write_tanner_graph_file(seed_code: nx.Graph, output_file: str) -> None:
             writer.write(',%d' % data_to_index[d])
         writer.write('\n')
     # Write logical observables of the code.
-    x_obs_list, z_obs_list = get_observables(gr, seed_code) 
+    x_obs_list, z_obs_list = gr.graph['obs_list']['x'], gr.graph['obs_list']['z']
     for (i, obs) in enumerate(x_obs_list):
         writer.write('OX%d' % i)
         for d in obs:
