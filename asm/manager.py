@@ -100,7 +100,8 @@ class AsmManager:
                 detection_event_order.extend(self.flag_qubits)
                 detection_event_order.extend(self.code.graph['plaquettes'])
         else:
-            pass # TODODODODO
+            detection_event_order.extend(self.code.graph[self.memory])
+            detection_event_order.extend(self.flag_qubits)
         detection_events = []
         detection_event_map = defaultdict(list)
         for r in range(rounds):
@@ -115,7 +116,7 @@ class AsmManager:
         if self._mode_use_plaquettes_instead_of_checks:
             checks = self.code.graph['plaquettes']
         else:
-            pass  # TODODODODODO
+            checks = self.code.graph[self.memory]
         for (i, x) in enumerate(checks):
             detection_events.append(x)
             detection_event_map[x].append(base_k + i)
@@ -132,13 +133,13 @@ class AsmManager:
         if self._mode_use_plaquettes_instead_of_checks:
             plaquettes = self.code.graph['plaquettes']
         else:
-            pass
+            mem_checks = self.code.graph[self.memory]
         detection_events, detection_event_map = self.get_detection_events(rounds)
         #
         # PROLOGUE
         #
         self.big_comment('PROLOGUE')
-        self.reset(range(self.n))
+        self.reset(data_qubits)
         if self.memory == 'x':
             self.h(data_qubits)
         #
@@ -199,6 +200,18 @@ class AsmManager:
             else:
                 self.annotation('inject_timing_error')
                 self._standard_syndrome_extraction()
+                # Create detection events.
+                for pq in mem_checks:
+                    event_no = detection_event_map[pq][r]
+                    plaq = self.code.nodes[pq]['plaquette']
+                    if r == 0:
+                        m = self.meas_ctr_map[pq]
+                        self.property('color', self.code.graph['plaquette_color_map'][plaq])
+                        self.event(event_no, m)
+                    else:
+                        m1, m2 = self.meas_ctr_map[pq], prev_meas_ctr_map[pq]
+                        self.property('color', self.code.graph['plaquette_color_map'][plaq])
+                        self.event(event_no, m1, m2)
         #
         # EPILOGUE
         #
@@ -214,13 +227,20 @@ class AsmManager:
                 meas_array.append(self.meas_ctr_map[pq])
                 self.property('color', self.code.graph['plaquette_color_map'][pq])
                 self.event(event_no, *meas_array)
-            # Write observables.
-            obs_list = self.code.graph['obs_list'][self.memory]
-            for obs in obs_list:
-                meas_array = [self.meas_ctr_map[x] for x in obs]
-                self.auto_obs(*meas_array)
         else:
-            pass
+            for pq in mem_checks:
+                event_no = detection_event_map[pq][rounds]
+                support = self.code.nodes[pq]['schedule_order']
+                meas_array = [self.meas_ctr_map[x] for x in support if x is not None]
+                meas_array.append(self.meas_ctr_map[pq])
+                plaq = self.code.nodes[pq]['plaquette']
+                self.property('color', self.code.graph['plaquette_color_map'][plaq])
+                self.event(event_no, *meas_array)
+        # Write observables.
+        obs_list = self.code.graph['obs_list'][self.memory]
+        for obs in obs_list:
+            meas_array = [self.meas_ctr_map[x] for x in obs]
+            self.auto_obs(*meas_array)
 
     def h(self, operands: list[int]):
         self._op('h', operands)
@@ -230,11 +250,11 @@ class AsmManager:
 
     def measure(self, operands: list[int], update_meas_ctr_map=True):
         self._op('measure', operands)
-        if update_meas_ctr_map:
-            k = self.meas_ctr_map['curr']
-            for (i, x) in enumerate(operands):
+        k = self.meas_ctr_map['curr']
+        for (i, x) in enumerate(operands):
+            if update_meas_ctr_map:
                 self.meas_ctr_map[x] = k+i
-            self.meas_ctr_map['curr'] = k + len(operands)
+        self.meas_ctr_map['curr'] = k + len(operands)
 
     def reset(self, operands: list[int]):
         self._op('reset', operands)
@@ -271,8 +291,11 @@ class AsmManager:
         self._writer.write('#\n# %s \n#\n' % text)
 
     def _standard_syndrome_extraction(self):
-        checks = self.code.graph.graph['checks']
-        x_checks = self.code_graph.graph['x']
+        checks = self.code.graph['checks']
+        x_checks = self.code.graph['x']
+
+        self.reset(self.flag_qubits)
+        self.reset(checks)
 
         self.h(x_checks)
 
@@ -290,11 +313,12 @@ class AsmManager:
         self.h(x_checks)
         self.measure(self.flag_qubits)
         self.measure(checks)
-        self.reset(self.flag_qubits)
-        self.reset(checks)
 
     def _plaquette_syndrome_extraction(self, stabilizer: str):
         plaquettes = self.code.graph['plaquettes']
+
+        self.reset(self.flag_qubits)
+        self.reset(plaquettes)
 
         if stabilizer == 'x':
             self.h(plaquettes)
@@ -314,8 +338,6 @@ class AsmManager:
             self.h(plaquettes)
         self.measure(self.flag_qubits, update_meas_ctr_map=(self.memory != stabilizer))
         self.measure(plaquettes, update_meas_ctr_map=(self.memory == stabilizer))
-        self.reset(self.flag_qubits)
-        self.reset(plaquettes)
 
     def _flag_hadamards(self, checks: list[int], plaquette_stabilizer=''):
         if self._mode_use_plaquettes_instead_of_checks and plaquette_stabilizer == 'x':

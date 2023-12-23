@@ -9,9 +9,9 @@ from qonstruct.asm.manager import AsmManager
 
 from qonstruct import qecolor
 
-def asm_hexagonal_color_code(output_file: str, distance: int, rounds: int, memory='z', use_flags=True):
-    code = qecolor.make_hexagonal_tanner_graph(distance)
-    mgr = AsmManager(code, use_plaquettes_instead_of_checks=True)
+def asm_hexagonal_color_code(output_file: str, distance: int, rounds: int, memory='z', use_flags=True, both_at_once=False):
+    code = qecolor.make_hexagonal_tanner_graph(distance, both_at_once=both_at_once)
+    mgr = AsmManager(code, use_plaquettes_instead_of_checks=(not both_at_once))
     mgr.memory = memory
 
     if use_flags:

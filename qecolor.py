@@ -7,7 +7,7 @@
 
 import networkx as nx
 
-def make_hexagonal_tanner_graph(d: int) -> nx.Graph:
+def make_hexagonal_tanner_graph(d: int, both_at_once=False) -> nx.Graph:
     """
         This function will return a tanner graph for a hexagonal color
         code (weight-6 RGB plaquettes). The graph will have properties:
@@ -52,6 +52,9 @@ def make_hexagonal_tanner_graph(d: int) -> nx.Graph:
     gr.graph['plaquette_support_map'] = {}
     gr.graph['plaquette_color_map'] = {}
     plaq = n
+
+    x_obs = data_qubits
+    z_obs = x_obs
     
     get_loc = lambda _r, _c: loc_map[(_r, _c)] if (_r, _c) in loc_map else None
 
@@ -74,10 +77,17 @@ def make_hexagonal_tanner_graph(d: int) -> nx.Graph:
         gr.graph['plaquette_color_map'][plaq] = i % 3
         for stabilizer in ['x', 'z']:
             # Create check vertex.
+            if both_at_once:
+                if stabilizer == 'z':
+                    schedule_order = [b, c, d, a, f, e, None]
+                else:
+                    schedule_order = [None, b, a, f, c, d, e]
+            else:
+                schedule_order = [b, c, e, d, a, f]
             gr.add_node(n,\
                         node_type=stabilizer,\
                         color=i%3, plaquette=plaq,\
-                        schedule_order=[b, c, e, d, a, f])
+                        schedule_order=schedule_order)
             for x in [a, b, c, d, e, f]:
                 if x is not None:
                     gr.add_edge(x, n)
