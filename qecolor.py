@@ -52,9 +52,6 @@ def make_hexagonal_tanner_graph(d: int, both_at_once=False) -> nx.Graph:
     gr.graph['plaquette_support_map'] = {}
     gr.graph['plaquette_color_map'] = {}
     plaq = n
-
-    x_obs = data_qubits
-    z_obs = x_obs
     
     get_loc = lambda _r, _c: loc_map[(_r, _c)] if (_r, _c) in loc_map else None
 

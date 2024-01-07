@@ -3,9 +3,8 @@
     date:   8 November 2023
 """
 
-from primitives.matrix import *
-
-import ldpc
+from qonstruct.primitives.matrix import *
+from qonstruct import ldpc
 
 import networkx as nx
 
@@ -106,7 +105,7 @@ def get_observables(hgp_code: nx.Graph, seed_code: nx.Graph) -> tuple[list[list[
     z_obs_list.extend(_cartprod(ker_Ht, mquo, checks))
     # We need to select as many observables as there are logical qubits.
     # We also need to make sure the corresponding X and Z parts share qubits.
-    nlq = len(hgp_code.graph['data']) - len(hgp_code.graph['s'])
+    nlq = len(hgp_code.graph['data']) - len(hgp_code.graph['checks'])
     # Compute a basis of the logical operators.
     x_obs_list.sort(reverse=True, key=lambda x: len(x))
     z_obs_list.sort(reverse=True, key=lambda x: len(x))
@@ -114,46 +113,6 @@ def get_observables(hgp_code: nx.Graph, seed_code: nx.Graph) -> tuple[list[list[
     x_obs_list = x_obs_list[:nlq]
     z_obs_list = z_obs_list[:nlq]
     return x_obs_list, z_obs_list
-
-def write_tanner_graph_file(seed_code: nx.Graph, output_file: str) -> None:
-    """
-        This function will construct an HGP code given a classical
-        seed code (defined by the input tanner graph) and write it
-        to a file.
-    """
-    writer = open(output_file, 'w')
-
-    gr = make_hgp_quantum_tanner_graph(seed_code)
-    # Print code statistics
-    print('data qubits: %d' % len(gr.graph['data']))
-    print('logical qubits: %d' % (len(gr.graph['data']) - len(gr.graph['checks'])))
-    # Map data qubit nodes to indices.
-    data_to_index = { d : i for (i, d) in enumerate(gr.graph['data']) }
-    # Write stabilizers to the file.
-    x_ctr, z_ctr = 0, 0
-    for s in gr.graph['checks']:
-        if gr.nodes[s]['node_type'] == 'x':
-            writer.write('X%d' % x_ctr)
-            x_ctr += 1
-        else:
-            writer.write('Z%d' % z_ctr)
-            z_ctr += 1
-        for d in gr.neighbors(s):
-            writer.write(',%d' % data_to_index[d])
-        writer.write('\n')
-    # Write logical observables of the code.
-    x_obs_list, z_obs_list = gr.graph['obs_list']['x'], gr.graph['obs_list']['z']
-    for (i, obs) in enumerate(x_obs_list):
-        writer.write('OX%d' % i)
-        for d in obs:
-            writer.write(',%d' % data_to_index[d])
-        writer.write('\n')
-    for (i, obs) in enumerate(z_obs_list):
-        writer.write('OZ%d' % i)
-        for d in obs:
-            writer.write(',%d' % data_to_index[d])
-        writer.write('\n')
-    writer.close()
 
 if __name__ == '__main__':
     import parsing.cmd
@@ -166,5 +125,6 @@ if __name__ == '__main__':
     s = parsing.cmd.try_get_int(arg_list, 's')
 
     seed_code = ldpc.make_regular_tanner_graph(r, c, s)
-    write_tanner_graph_file(seed_code, output_file)
+    gr = make_hgp_quantum_tanner_graph(seed_code)
+    write_tanner_graph_file(gr, output_file)
 

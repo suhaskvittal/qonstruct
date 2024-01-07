@@ -3,7 +3,7 @@
     date:   8 November 2023
 """
 
-from primitives.matrix import *
+from qonstruct.primitives.matrix import *
 
 import networkx as nx
 
