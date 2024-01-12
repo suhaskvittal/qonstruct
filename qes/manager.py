@@ -10,7 +10,7 @@ from collections import defaultdict
 def concat(arr: list[int], delimiter=','):
     return delimiter.join(str(x) for x in arr)
 
-class AsmManager:
+class QesManager:
     def __init__(self, tanner_graph: nx.Graph, use_plaquettes_instead_of_checks=False):
         self.code = tanner_graph
         if use_plaquettes_instead_of_checks:
