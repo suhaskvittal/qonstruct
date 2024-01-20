@@ -5,9 +5,9 @@
     Pre-written generation code.
 """
 
-from qonstruct.asm.manager import QesManager
+from qonstruct.qes.manager import QesManager
 
-from qonstruct import qecolor
+from qonstruct.codes import qecolor
 
 def qes_hexagonal_color_code(
         output_file: str,
@@ -35,18 +35,3 @@ def qes_hexagonal_color_code(
     mgr.fopen(output_file)
     mgr.write_memory_experiment(rounds)
     mgr.fclose()
-
-if __name__ == '__main__':
-    from sys import argv
-    
-    from parsing.cmd import *
-
-    inputs = parse(argv)
-
-    output_file = try_get_string(inputs, 'out')
-    d = try_get_int(inputs, 'd')
-    r = try_get_int(inputs, 'r')
-
-    memory = 'x' if 'x' in inputs else 'z'
-
-    asm_hexagonal_color_code(output_file, d, r, memory=memory)

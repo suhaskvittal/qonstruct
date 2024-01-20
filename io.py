@@ -3,6 +3,8 @@
     date:   2 January 2024
 """
 
+from qonstruct.codes.base import *
+
 import networkx as nx
 
 def read_tanner_graph_file(input_file: str) -> nx.Graph:
@@ -34,7 +36,7 @@ def read_tanner_graph_file(input_file: str) -> nx.Graph:
         support = [int(x) for x in line_data[1:]]
         if ch_s[0] == 'O':
             # This is an observable.
-            if ch_s[1] == 'X' || ch_s[1] == 'x':  # X obs.
+            if ch_s[1] == 'X' or ch_s[1] == 'x':  # X obs.
                 x_obs_list.append(support)
             else:
                 z_obs_list.append(support)
@@ -47,8 +49,8 @@ def read_tanner_graph_file(input_file: str) -> nx.Graph:
                 data_qubits.append(x)
     # Add the data qubits now:
     n = len(data_qubits)
-    for (ch_s, support) in enumerate(check_map):
-        stabilizer = ch_s[0] == 'x' ? 'x' : 'z'
+    for (ch_s, support) in check_map.items():
+        stabilizer = 'x' if ch_s[0] == 'X' or ch_s[0] == 'x' else 'z'
         gr.add_node(n, node_type=stabilizer) 
         if stabilizer == 'x':
             x_checks.append(n)
@@ -66,29 +68,28 @@ def write_tanner_graph_file(tanner_graph: nx.Graph, output_file: str) -> None:
     """
     writer = open(output_file, 'w')
     # Map data qubit nodes to indices.
-    data_to_index = { d : i for (i, d) in enumerate(tanner_graph.graph['data']) }
-    # Write stabilizers to the file.
     x_ctr, z_ctr = 0, 0
-    for s in tanner_graph.graph['checks']:
-        if tanner_graph.nodes[s]['node_type'] == 'x':
+    for s in tanner_graph.graph['checks']['all']:
+        if get_check_property(tanner_graph, s, 'node_type') == 'x':
             writer.write('X%d' % x_ctr)
             x_ctr += 1
         else:
             writer.write('Z%d' % z_ctr)
             z_ctr += 1
         for d in tanner_graph.neighbors(s):
-            writer.write(',%d' % data_to_index[d])
+            writer.write(',%d' % tanner_graph.nodes[d]['label'])
         writer.write('\n')
     # Write logical observables of the code.
     x_obs_list, z_obs_list = tanner_graph.graph['obs_list']['x'], tanner_graph.graph['obs_list']['z']
     for (i, obs) in enumerate(x_obs_list):
         writer.write('OX%d' % i)
         for d in obs:
-            writer.write(',%d' % data_to_index[d])
+            writer.write(',%d' % d)
         writer.write('\n')
     for (i, obs) in enumerate(z_obs_list):
         writer.write('OZ%d' % i)
         for d in obs:
-            writer.write(',%d' % data_to_index[d])
+            writer.write(',%d' % d)
         writer.write('\n')
     writer.close()
+
