@@ -3,7 +3,7 @@
     date:   2 January 2024
 """
 
-from qonstruct.codes.base import *
+from qonstruct.code_builder.base import *
 
 import networkx as nx
 
@@ -26,40 +26,24 @@ def read_tanner_graph_file(input_file: str) -> nx.Graph:
     lines = reader.readlines()
     reader.close()
 
-    gr = nx.Graph()
+    gr = tanner_init()
 
-    data_qubits, x_checks, z_checks, x_obs_list, z_obs_list = [], [], [], [], []
-    check_map = {}  # Add the checks after parsing
+    n = 0
     for ln in lines:
         line_data = ln.split(',')
         ch_s = line_data[0]
+        # Get type:
+        if ch_s[-2] == 'X' or ch_s[-2] == 'x':
+            node_type = 'x'
+        else:
+            node_type = 'z'
+
         support = [int(x) for x in line_data[1:]]
         if ch_s[0] == 'O':
             # This is an observable.
-            if ch_s[1] == 'X' or ch_s[1] == 'x':  # X obs.
-                x_obs_list.append(support)
-            else:
-                z_obs_list.append(support)
+            add_observable(gr, support, node_type)
         else:
-            check_map[ch_s] = support
-        # Create data qubits.
-        for x in support:
-            if not nx.has_node(x):
-                gr.add_node(x, node_type='data')
-                data_qubits.append(x)
-    # Add the data qubits now:
-    n = len(data_qubits)
-    for (ch_s, support) in check_map.items():
-        stabilizer = 'x' if ch_s[0] == 'X' or ch_s[0] == 'x' else 'z'
-        gr.add_node(n, node_type=stabilizer) 
-        if stabilizer == 'x':
-            x_checks.append(n)
-        else:
-            z_checks.append(n)
-        # Add edges to support.
-        for x in support:
-            gr.add_edge(x, n)
-        n += 1
+            add_check(gr, n, node_type, support)
     return gr
 
 def write_tanner_graph_file(tanner_graph: nx.Graph, output_file: str) -> None:

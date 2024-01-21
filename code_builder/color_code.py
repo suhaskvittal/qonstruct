@@ -5,7 +5,7 @@
     Color code tanner graphs.
 """
 
-from qonstruct.codes.base import *
+from qonstruct.code_builder.base import *
 
 import networkx as nx
 
