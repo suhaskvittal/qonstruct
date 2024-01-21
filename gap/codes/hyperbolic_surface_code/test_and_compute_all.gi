@@ -7,7 +7,7 @@
 # Precondition: run init_surface.gi
 #
 
-verbose := false;
+verbose := true;
 
 use_group := 1;
 while use_group <= Length(normal_low_index_subgroups) do

@@ -10,7 +10,8 @@
 #
 
 # Get functions.
-Read("gap/utils.gi");
+Read("gap/utils/groups.gi");
+Read("gap/utils/qec.gi");
 LoadPackage("LINS");
 
 # Compute normal subgroups.
