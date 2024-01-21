@@ -7,7 +7,12 @@
 # Precondition: run init_surface.gi
 #
 
-verbose := true;
+verbose := false;
+
+# Create the output folder.
+LoadPackage("IO");
+output_folder := Concatenation("codes/hy_sc/", String(r), "_", String(s));
+Print("Make output folder ", output_folder , ": ", IO_mkdir(output_folder, 448), "\n");
 
 use_group := 1;
 while use_group <= Length(normal_low_index_subgroups) do

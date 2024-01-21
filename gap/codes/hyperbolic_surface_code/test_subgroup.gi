@@ -20,7 +20,9 @@ iso_bc := IsomorphicSubgroups(G_rs_mod_H, CyclicGroup(r));
 iso_ca := IsomorphicSubgroups(G_rs_mod_H, CyclicGroup(s));
 iso_ab := IsomorphicSubgroups(G_rs_mod_H, CyclicGroup(2));
 
-Print("\t# of isomorphisms for BC, CA, AB: ",
-                            Length(iso_bc), ", ",
-                            Length(iso_ca), ", ",
-                            Length(iso_ab), "\n");
+if verbose then
+    Print("\t# of isomorphisms for BC, CA, AB: ",
+                                Length(iso_bc), ", ",
+                                Length(iso_ca), ", ",
+                                Length(iso_ab), "\n");
+fi;
