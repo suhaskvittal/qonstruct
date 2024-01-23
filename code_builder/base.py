@@ -20,86 +20,36 @@ def tanner_init() -> nx.Graph:
     gr.graph['plaquette_support_map'] = {}
     gr.graph['plaquette_color_map'] = {}
     gr.graph['plaquette_check_map'] = defaultdict(list)
-    # Hidden properties:
-    gr.graph['_index'] = 0
-    gr.graph['_data_to_index'] = {}
-    gr.graph['_check_to_index'] = {}
     return gr
 
-def add_data_qubit(gr: nx.Graph, q: int, **kwargs) -> int:
-    n = gr.graph['_index']
-    gr.add_node(n, node_type='data', label=q)
+def add_data_qubit(gr: nx.Graph, q: int, **kwargs) -> None:
+    gr.add_node(q, node_type='data')
     for (k, v) in kwargs.items():
-        gr.nodes[n][k] = v
+        gr.nodes[q][k] = v
     gr.graph['data_qubits'].append(q)
 
-    gr.graph['_data_to_index'][q] = n
-    gr.graph['_index'] += 1
-    return n
-
-def contains_data_qubit(gr: nx.Graph, q: int) -> bool:
-    return q in gr.graph['_data_to_index']
-
-def get_data_qubit_node(gr: nx.Graph, q: int) -> int:
-    return gr.graph['_data_to_index'][q]
-
-def add_check(gr: nx.Graph, check: int, check_type: str, support: list[int], **kwargs) -> int:
-    n = gr.graph['_index']
-    gr.add_node(n, node_type=check_type, label=check)
+def add_check(gr: nx.Graph, check: int, check_type: str, support: list[int], **kwargs) -> None:
+    gr.add_node(check, node_type=check_type, schedule_order=[])
     for (k, v) in kwargs.items():
-        gr.nodes[n][k] = v
+        gr.nodes[check][k] = v
     gr.graph['checks']['all'].append(check)
     gr.graph['checks'][check_type].append(check)
-
-    gr.graph['_check_to_index'][check] = n
-    gr.graph['_index'] += 1
     # Add edges to data qubits:
     for q in support:
-        if contains_data_qubit(gr, q):
-            x = get_data_qubit_node(gr, q)
-        else:
-            x = add_data_qubit(gr, q)
-        gr.add_edge(x, n)
-    return n
+        if not gr.has_node(q):
+            add_data_qubit(gr, q)
+        gr.add_edge(check, q)
 
 def add_to_support(gr: nx.Graph, check: int, q: int) -> None:
     n = gr.graph['_check_to_index'][check]
     x = gr.graph['_data_to_index'][q]
     gr.add_edge(n, x)
-        
-def contains_check(gr: nx.Graph, check: int) -> bool:
-    return check in gr.graph['_check_to_index']
-
-def get_check_node(gr: nx.Graph, check: int) -> int:
-    return gr.graph['_check_to_index'][check]
 
 def get_support(gr: nx.Graph, check: int) -> list[int]:
-    return [gr.nodes[x]['label'] for x in gr.neighbors(get_check_node(gr, check))]
+    return [x for x in gr.neighbors(check)]
 
 def add_observable(gr: nx.Graph, observable: list[int], obs_type: str) -> None:
     gr.graph['obs_list'][obs_type].append(observable)
-
-def get_graph_property(gr: nx.Graph, property_key: str) -> any:
-    return gr.graph['property_key']
-
-def get_data_qubit_property(gr: nx.Graph, q: int, property_key: str) -> any:
-    n = get_data_qubit_node(gr, q)
-    return gr.nodes[n][property_key]
-
-def get_check_property(gr: nx.Graph, check: int, property_key: str) -> any:
-    n = get_check_node(gr, check)
-    return gr.nodes[n][property_key]
-
-def set_graph_property(gr: nx.Graph, property_key: str, property_value: any) -> None:
-    gr.graph[property_key] = property_value
-
-def set_data_qubit_property(gr: nx.Graph, q: int, property_key: str, property_value: any) -> None:
-    n = get_data_qubit_node(gr, q)
-    gr.nodes[n][property_key] = property_value
-
-def set_check_property(gr: nx.Graph, check: int, property_key: str, property_value: any) -> None:
-    n = get_check_node(gr, check)
-    gr.nodes[n][property_key] = property_value
 
 # Specific Code Functions:
 
@@ -114,7 +64,5 @@ def set_plaquette(gr: nx.Graph, check: int, plaquette: int) -> None:
     gr.graph['plaquette_check_map'][plaquette].append(check)
 
 def get_plaquette(gr: nx.Graph, check: int) -> int:
-    n = get_check_node(gr, check)
-    return gr.nodes[n]['plaquette']
-
+    return gr.nodes[check]['plaquette']
 

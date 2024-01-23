@@ -6,7 +6,7 @@
     Requires cplex.
 """
 
-from qonstruct.codes.base import *
+from qonstruct.code_builder.base import *
 
 import networkx as nx
 
@@ -50,7 +50,7 @@ def compute_syndrome_extraction_schedule(tanner_graph: nx.Graph):
         # Add commutativity and timing constraints.
         for j in range(0, i):
             other_ch = checks[j]
-            schedule_order = tanner_graph.nodes[get_check_node(tanner_graph, other_ch)]['schedule_order']
+            schedule_order = tanner_graph.nodes[other_ch]['schedule_order']
 
             ind_sum_array = []
             for (t, q) in enumerate(schedule_order):
@@ -79,5 +79,5 @@ def compute_syndrome_extraction_schedule(tanner_graph: nx.Graph):
             t = int(round(soln.get_var_value(v)))
             # As t is 1-indexed, the actual time is t-1.
             schedule_order[t-1] = q
-        tanner_graph.nodes[get_check_node(tanner_graph, ch)]['schedule_order'] = schedule_order
+        tanner_graph.nodes[ch]['schedule_order'] = schedule_order
 

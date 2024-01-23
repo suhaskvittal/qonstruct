@@ -29,21 +29,29 @@ def read_tanner_graph_file(input_file: str) -> nx.Graph:
     gr = tanner_init()
 
     n = 0
+    check_list_map = {'x': [], 'z': []}
     for ln in lines:
         line_data = ln.split(',')
         ch_s = line_data[0]
         # Get type:
-        if ch_s[-2] == 'X' or ch_s[-2] == 'x':
-            node_type = 'x'
-        else:
-            node_type = 'z'
-
         support = [int(x) for x in line_data[1:]]
+        for x in support:
+            if not gr.has_node(x):
+                add_data_qubit(gr, x)
+                n = max(n, x)
         if ch_s[0] == 'O':
             # This is an observable.
+            node_type = 'x' if ch_s[1] == 'X' or ch_s[1] == 'x' else 'z'
             add_observable(gr, support, node_type)
         else:
-            add_check(gr, n, node_type, support)
+            node_type = 'x' if ch_s[0] == 'X' or ch_s[0] == 'x' else 'z'
+            check_list_map[node_type].append(support)
+    n = n+1
+    for s in ['x', 'z']:
+        for support in check_list_map[s]:
+            add_check(gr, n, s, support)
+            n += 1
+
     return gr
 
 def write_tanner_graph_file(tanner_graph: nx.Graph, output_file: str) -> None:

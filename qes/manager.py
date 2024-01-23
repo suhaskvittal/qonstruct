@@ -100,7 +100,7 @@ class QesManager:
                 detection_event_order.extend(self.flag_qubits)
                 detection_event_order.extend(self.code.graph['plaquettes'])
         else:
-            detection_event_order.extend(self.code.graph[self.memory])
+            detection_event_order.extend(self.code.graph['checks'][self.memory])
             detection_event_order.extend(self.flag_qubits)
         detection_events = []
         detection_event_map = defaultdict(list)
@@ -116,7 +116,7 @@ class QesManager:
         if self._mode_use_plaquettes_instead_of_checks:
             checks = self.code.graph['plaquettes']
         else:
-            checks = self.code.graph[self.memory]
+            checks = self.code.graph['checks'][self.memory]
         for (i, x) in enumerate(checks):
             detection_events.append(x)
             detection_event_map[x].append(base_k + i)
@@ -129,11 +129,11 @@ class QesManager:
         self._writer.close()
 
     def write_memory_experiment(self, rounds: int):
-        data_qubits = self.code.graph['data']
+        data_qubits = self.code.graph['data_qubits']
         if self._mode_use_plaquettes_instead_of_checks:
             plaquettes = self.code.graph['plaquettes']
         else:
-            mem_checks = self.code.graph[self.memory]
+            mem_checks = self.code.graph['checks'][self.memory]
         detection_events, detection_event_map = self.get_detection_events(rounds)
         #
         # PROLOGUE
@@ -203,14 +203,11 @@ class QesManager:
                 # Create detection events.
                 for pq in mem_checks:
                     event_no = detection_event_map[pq][r]
-                    plaq = self.code.nodes[pq]['plaquette']
                     if r == 0:
                         m = self.meas_ctr_map[pq]
-                        self.property('color', self.code.graph['plaquette_color_map'][plaq])
                         self.event(event_no, m)
                     else:
                         m1, m2 = self.meas_ctr_map[pq], prev_meas_ctr_map[pq]
-                        self.property('color', self.code.graph['plaquette_color_map'][plaq])
                         self.event(event_no, m1, m2)
         #
         # EPILOGUE
@@ -233,8 +230,6 @@ class QesManager:
                 support = self.code.nodes[pq]['schedule_order']
                 meas_array = [self.meas_ctr_map[x] for x in support if x is not None]
                 meas_array.append(self.meas_ctr_map[pq])
-                plaq = self.code.nodes[pq]['plaquette']
-                self.property('color', self.code.graph['plaquette_color_map'][plaq])
                 self.event(event_no, *meas_array)
         # Write observables.
         obs_list = self.code.graph['obs_list'][self.memory]
@@ -291,8 +286,8 @@ class QesManager:
         self._writer.write('#\n# %s \n#\n' % text)
 
     def _standard_syndrome_extraction(self):
-        checks = self.code.graph['checks']
-        x_checks = self.code.graph['x']
+        checks = self.code.graph['checks']['all']
+        x_checks = self.code.graph['checks']['x']
 
         self.reset(self.flag_qubits)
         self.reset(checks)
