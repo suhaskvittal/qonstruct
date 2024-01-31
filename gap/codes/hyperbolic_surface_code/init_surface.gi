@@ -41,3 +41,5 @@ Print("\n");
 gr_root := LinsRoot(gr);
 _G_rs := G_rs;
 G_rs := Grp(gr_root);
+
+use_group := 1;

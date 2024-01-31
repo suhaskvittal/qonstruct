@@ -160,30 +160,8 @@ class QesManager:
                         for fq in self.flag_qubits:
                             event_no = detection_event_map[fq][r]
                             m = self.meas_ctr_map[fq]
-                            # Get flag edge.
-                            pqt = self.flag_edge_map[fq]['base']
-                            pqa, pqb = self.flag_edge_map[fq]['edges'][0]
-                            if self.memory == 'z':
-                                # Event is in the same round.
-                                dtt = detection_event_map[pqt][r]
-                                dta = detection_event_map[pqa][r]
-                                if pqb != -1:
-                                    dtb = detection_event_map[pqb][r]
-                                else:
-                                    dtb = -1
-                            else:
-                                # Event is in next round.
-                                dtt = detection_event_map[pqt][r+1]
-                                dta = detection_event_map[pqa][r+1]
-                                if pqb != -1:
-                                    dtb = detection_event_map[pqb][r+1]
-                                else:
-                                    dtb = -1
                             # Get next detection event.
                             self.annotation('flag')
-                            self.property('flag_edge_src', dta)
-                            self.property('flag_edge_thru', dtt)
-                            self.property('flag_edge_dst', dtb)
                             self.event(event_no, m)
                     else:
                         # These are stabilizer detection events.

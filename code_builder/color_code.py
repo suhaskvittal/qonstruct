@@ -42,7 +42,7 @@ def make_hexagonal(d: int, both_at_once=False) -> nx.Graph:
     # Now, create all the checks and complete the Tanner graph.
     get_loc = lambda _r, _c: loc_map[(_r, _c)] if (_r, _c) in loc_map else None
 
-    n, plaq = 0, 0
+    plaq = 0
     for (i, j) in check_locs:
         a = get_loc(i-1, j-1)
         b = get_loc(i-1, j)

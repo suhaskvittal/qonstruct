@@ -82,6 +82,7 @@ while ii <= Length(iso_bc) do
             n_x_ops := Length(x_operators);
             n_z_ops := Length(z_operators);
 
+            genus := n_data - n_checks;
             if n_data - n_checks = genus and n_x_ops = genus and n_z_ops = genus then
                 Print("\tData qubits: ", n_data, "\n");
                 Print("\tLogical qubits: ", genus, "\n");
