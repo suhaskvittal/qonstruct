@@ -9,7 +9,7 @@ from qonstruct.code_builder.base import *
 
 import networkx as nx
 
-def make_hexagonal(d: int, both_at_once=False) -> nx.Graph:
+def make_hexagonal(d: int, both_at_once=True) -> nx.Graph:
     """
         This function will return a tanner graph for a hexagonal color
         code (weight-6 RGB plaquettes).
@@ -68,7 +68,7 @@ def make_hexagonal(d: int, both_at_once=False) -> nx.Graph:
         plaq += 1
     return gr
 
-def make_hycc_d4(both_at_once=False) -> nx.Graph:
+def make_hycc_d4(both_at_once=True) -> nx.Graph:
     gr = tanner_init()
 
     red_operators = [
@@ -80,12 +80,14 @@ def make_hycc_d4(both_at_once=False) -> nx.Graph:
 
     blue_operators = [
         [2, 4, 8, 10, 21, 19, 13, 15],
-        [18, 20, 14, 12, 3, 5, 9, 11]
+        [18, 20, 14, 12, 3, 5, 9, 11],
+#       [0, 1, 16, 17, 22, 23, 6, 7]
     ]
 
     green_operators = [
         [0, 2, 6, 8, 23, 21, 15, 17],
-        [20, 22, 14, 16, 3, 1, 7, 9]
+        [20, 22, 14, 16, 3, 1, 7, 9],
+#       [4, 5, 12, 13, 19, 18, 10, 11]
     ]
 
     z_obs_list = [
@@ -117,7 +119,7 @@ def make_hycc_d4(both_at_once=False) -> nx.Graph:
         add_observable(gr, x_obs_list[i], 'x')
         add_observable(gr, z_obs_list[i], 'z')
     # Create checks:
-    n, plaq = 0, 0
+    n, plaq = 24, 0
     for (c, check_list) in enumerate([red_operators, green_operators, blue_operators]):
         for support in check_list:
             add_plaquette(gr, plaq, support, c)

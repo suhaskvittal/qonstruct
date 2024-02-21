@@ -36,6 +36,8 @@ def add_check(gr: nx.Graph, check: int, check_type: str, support: list[int], **k
     gr.graph['checks'][check_type].append(check)
     # Add edges to data qubits:
     for q in support:
+        if q is None:
+            continue
         if not gr.has_node(q):
             add_data_qubit(gr, q)
         gr.add_edge(check, q)

@@ -1,6 +1,7 @@
 # Author: Suhas Vittal
 # date:    30 January 2024
 
+LoadPackage("Gauss");
 
 PrintMatrix :=
     function(M)
@@ -28,7 +29,7 @@ M := [[0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1],
       [1,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1],
       [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]];
 M := M * One(GF(2));
-ech := SemiEchelonMat(M);
+ech := EchelonMat(M);
 A := ech.vectors;
 Print(ech.heads, "\n");
 

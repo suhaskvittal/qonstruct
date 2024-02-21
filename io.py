@@ -62,14 +62,14 @@ def write_tanner_graph_file(tanner_graph: nx.Graph, output_file: str) -> None:
     # Map data qubit nodes to indices.
     x_ctr, z_ctr = 0, 0
     for s in tanner_graph.graph['checks']['all']:
-        if get_check_property(tanner_graph, s, 'node_type') == 'x':
+        if tanner_graph.nodes[s]['node_type'] == 'x':
             writer.write('X%d' % x_ctr)
             x_ctr += 1
         else:
             writer.write('Z%d' % z_ctr)
             z_ctr += 1
         for d in tanner_graph.neighbors(s):
-            writer.write(',%d' % tanner_graph.nodes[d]['label'])
+            writer.write(',%d' % d)
         writer.write('\n')
     # Write logical observables of the code.
     x_obs_list, z_obs_list = tanner_graph.graph['obs_list']['x'], tanner_graph.graph['obs_list']['z']

@@ -82,6 +82,13 @@ while ii <= Length(iso_bc) do
             n_x_ops := Length(x_operators);
             n_z_ops := Length(z_operators);
 
+            if f_MinOperatorWeight(x_operators) <= 2
+            or f_MinOperatorWeight(z_operators) <= 2
+            then
+                kk := kk+1;
+                continue;
+            fi;
+
             genus := n_data - n_checks;
             if n_data - n_checks = genus and n_x_ops = genus and n_z_ops = genus then
                 Print("\tData qubits: ", n_data, "\n");
