@@ -1,25 +1,15 @@
 # Author: Suhas Vittal
 
-Read("gap/gates.gi");
+Read("gap/leakage_sim/gates.gi");
 
-gens := [CX];
-Append(gens, KRON(H));
-Append(gens, KRON(S));
-Append(gens, KRON(L));
- 
 # Search for normal subgroup.
-#CG := GroupByGenerators(gens);
-CG := Group(H, S, L);
+CG := Group(H, S, L, -H, -I, -S, -L);
+
+#CG2 := GroupByGenerators(gens);
+
+# It's very hard to get normal subgroups of CG2.
 nsgs := NormalSubgroups(CG);
 # Find smallest normal subgroup with X, Y, and Z.
-PX := [[0,1,0,0],
-       [1,0,0,0],
-       [0,0,0,1],
-       [0,0,1,0]];
-PZ := [[1,0,0,0],
-       [0,-1,0,0],
-       [0,0,1,0],
-       [0,0,0,-1]];
 
 k := 1;
 min_size := -1;
@@ -32,7 +22,7 @@ while k <= Length(nsgs) do
         continue;
     fi;
 
-    is_good := (S in SG) and (L in SG) and (PX in SG) and (PZ in SG);
+    is_good := (PX in SG) and (PZ in SG);
     if is_good and (min_size < 0 or n < min_size) then
         Print("Found group with ", n, " elements and ", ng, " generators.\n");
         min_size := n;
