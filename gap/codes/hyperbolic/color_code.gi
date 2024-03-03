@@ -9,9 +9,9 @@
 #   max_index -- max index of normal subgroup
 #
 
-r := 3;
+r := 4;
 s := 8;
-max_index := 2000;
+max_index := 1000;
 
 # Get functions.
 Read("gap/utils/qec.gi");
@@ -22,13 +22,7 @@ LoadPackage("LINS");
 
 # Construct tiling:
 G := FreeGroup(2);
-G := G / [ G.1^2, G.2^r, (G.1*G.2)^s ];
-#G_base := FreeGroup(3);
-#G_base := G_base / [ G_base.1^2, G_base.2^2, G_base.3^2, 
-#                   (G_base.1*G_base.2)^2, 
-#                   (G_base.2*G_base.3)^r,
-#                   (G_base.3*G_base.1)^s ];
-#G := Subgroup(G_base, [G_base.2*G_base.3, G_base.3*G_base.1]);
+G := G / [ G.1^r, G.2^s, (G.1*G.2)^2 ];
 
 # Get low-index normal subgroup of G. We will use this to make a quotient group.
 gr := LowIndexNormalSubgroupsSearch(G, max_index);
@@ -38,51 +32,82 @@ Print("# of normal subgroups = ", Length(lins), "\n");
 
 G := Grp(LinsRoot(gr));
 
+code_folder := Concatenation("codes/hycc/", String(r), "_", String(s));
+IO_mkdir(code_folder, 448);
+
 # Iterate through subgroups.
 i := 1;
 while i <= Length(lins) do
+    n_data := Index(lins[i]); # This is the number of qubits.
+
     Print("Index: ", Index(lins[i]), "\n");
     H := Grp(lins[i]);
 
     G_mod_H := G / H;
-    # Get isomorphic subgroups of interest:
-    iso_1 := IsomorphicSubgroups(G_mod_H, PermGroup([r]));
-    iso_2 := IsomorphicSubgroups(G_mod_H, PermGroup([2, r]));
-    iso_3 := IsomorphicSubgroups(G_mod_H, PermGroup([2, s]));
-    Print("Subgroups: ", Length(iso_1), ", ", Length(iso_2), ", ", Length(iso_3), "\n");
-    # Iterate through all isomorphisms.
-    done := false;
-    ii := 1;
-    while ii <= Length(iso_1) do
-        jj := 1;
-        while jj <= Length(iso_2) do
-            kk := 1;
-            while kk <= Length(iso_3) do
-                # Get subgroups.
-                H1 := Image(iso_1[ii]);
-                H2 := Image(iso_2[jj]);
-                H3 := Image(iso_3[kk]);
-                faces1 := RightCosets(G_mod_H, H1);
-                faces2 := RightCosets(G_mod_H, H2);
-                faces3 := RightCosets(G_mod_H, H3);
+    gens := GeneratorsOfGroup(G_mod_H);
+    # Generators of the finite group:
+    a := gens[1];
+    b := gens[2];
+    ab := a*b;
+    
+    Print("\tGenerator orders:", Order(a), ", ", Order(b), ", ", Order(ab), "\n");
 
-                faces23 := Union(faces2, faces3);
-                Print(Length(faces23), ", ", Length(faces2), ", ", Length(faces3), "\n");
-                if TilingIsBipartite(faces23) then
-                    Print("\tTiling is Bipartite.\n");
-                    done := true;
-                else
-                    Print("\tTiling is not bipartite.\n");
-                fi;
-                
-                if done then break; fi;
-                kk := kk+1;
-            od;
-            if done then break; fi;
-            jj := jj+1;
-        od;
-        if done then break; fi;
-        ii := ii+1;
-    od;
+    if not (Order(a) = r and Order(b) = s and Order(ab) = 2) then
+        i := i+1;
+        continue;
+    fi;
+
+    _f1 := Rot1(b);
+    _f2 := Rot2(ab, b);
+    _f3 := Rot2(ab, b^-1);
+
+    f1 := GetCosets(G_mod_H, _f1);
+    f2 := GetCosets(G_mod_H, _f2);
+    f3 := GetCosets(G_mod_H, _f3);
+
+    f23 := f2;
+    Append(f23, f3);
+    is_bp := TilingIsBipartite(f23);
+    if not is_bp then
+        i := i+1;
+        continue;
+    fi;
+    # Identify each face (in f1, f2, f3) as a check operator, and each element
+    # of the coset is a qubit.
+    all_faces := f1;
+    Append(all_faces, f23);
+
+    plaquettes := ComputeIndicatorVectorsCC(G_mod_H, all_faces);
+    plaquettes := ComputeStabilizerGenerators(plaquettes);
+
+    if n_data <= 2*Length(plaquettes) then
+        i := i+1;
+        continue;
+    fi;
+
+    Print("\tPlaquettes = ", Length(plaquettes), "\n");
+
+    # Compute logical operators of the code.
+    operators := CssLXZOperators(plaquettes, plaquettes);
+    
+    n_checks := 2*Length(plaquettes);
+    n_ops := Length(operators);
+    n_log := n_data - n_checks;
+    d := MinOperatorWeight(operators);
+
+    if d > 2 then
+        Print("\tData qubits: ", n_data, "\n");
+        Print("\tLogical qubits: ", n_log, "\n");
+        Print("\tChecks: ", n_checks, "\n");
+        Print("\tOperators: ", n_ops, "\n");
+        Print("\t\tMin weight: ", d, "\n");
+
+        WriteCodeToFile(CodeFilename(code_folder, n_data, n_log, d, d),    
+                            plaquettes,
+                            plaquettes,
+                            operators,
+                            operators);
+    fi;
+
     i := i+1;
 od;

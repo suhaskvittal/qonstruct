@@ -55,13 +55,10 @@ class QesManager:
         mem_checks = self.code.graph['checks'][self.memory]
 
         mem_flags = []
-        flag_owner_map = {}
         for ch in self.flag_assignment_map:
             if self.code.nodes[ch]['node_type'] == self.memory:
                 continue
             mem_flags.extend(self.flag_assignment_map[ch]['all'])
-            for fq in self.flag_assignment_map[ch]['all']:
-                flag_owner_map[fq] = ch
         #
         # PROLOGUE
         #
@@ -97,7 +94,6 @@ class QesManager:
             for fq in mem_flags:
                 m = self.meas_ctr_map[fq]
                 self.annotation('flag')
-                self.property('owner', flag_owner_map[fq])
                 self.event(ectr, m)
                 ectr += 1
         #

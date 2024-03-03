@@ -56,9 +56,11 @@ def make_hexagonal(d: int, both_at_once=True) -> nx.Graph:
             # Create check vertex.
             if both_at_once:
                 if stabilizer == 'z':
-                    schedule_order = [b, c, d, a, f, e, None]
+#                   schedule_order = [b, c, d, a, f, e, None]
+                    schedule_order = [b, c, d, e, f, a, None, None, None, None, None, None]
                 else:
-                    schedule_order = [None, b, a, f, c, d, e]
+#                   schedule_order = [None, b, a, f, c, d, e]
+                    schedule_order = [None, None, None, None, None, None, b, c, d, e, f, a]
             else:
                 schedule_order = [b, c, e, d, a, f]
             add_check(gr, n, stabilizer, [a, b, c, d, e, f],
