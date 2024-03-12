@@ -3,7 +3,7 @@
 Read("gap/leakage_sim/gates.gi");
 
 # Search for normal subgroup.
-CG := Group(H, S, L, -H, -I, -S, -L);
+CG := Group(H, S, L, -I);
 
 #CG2 := GroupByGenerators(gens);
 
@@ -22,7 +22,7 @@ while k <= Length(nsgs) do
         continue;
     fi;
 
-    is_good := (PX in SG) and (PZ in SG);
+    is_good := (H*S*H in SG) and (S in SG);
     if is_good and (min_size < 0 or n < min_size) then
         Print("Found group with ", n, " elements and ", ng, " generators.\n");
         min_size := n;

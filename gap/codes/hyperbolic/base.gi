@@ -39,16 +39,10 @@ ComputeIndicatorVectorsCC :=
     end;
 
 CodeFilename :=
-    function(folder, n, k, dx, dz)
-        local filename, d;
-        if (dx < dz) then 
-            d := dx; 
-        else 
-            d := dz;
-        fi;
+    function(folder, n, k)
+        local filename;
         filename := Concatenation(folder, "/", 
-                                    String(n), "_", String(k), "_", String(d),
-                                    ".txt");
+                                    String(n), "_", String(k), ".txt");
         return filename;
     end;
 

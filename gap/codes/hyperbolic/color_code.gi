@@ -9,8 +9,6 @@
 #   max_index -- max index of normal subgroup
 #
 
-r := 4;
-s := 8;
 max_index := 1000;
 
 # Get functions.
@@ -95,19 +93,17 @@ while i <= Length(lins) do
     n_log := n_data - n_checks;
     d := MinOperatorWeight(operators);
 
-    if d > 2 then
-        Print("\tData qubits: ", n_data, "\n");
-        Print("\tLogical qubits: ", n_log, "\n");
-        Print("\tChecks: ", n_checks, "\n");
-        Print("\tOperators: ", n_ops, "\n");
-        Print("\t\tMin weight: ", d, "\n");
+    Print("\tData qubits: ", n_data, "\n");
+    Print("\tLogical qubits: ", n_log, "\n");
+    Print("\tChecks: ", n_checks, "\n");
+    Print("\tOperators: ", n_ops, "\n");
+    Print("\t\tMin weight: ", d, "\n");
 
-        WriteCodeToFile(CodeFilename(code_folder, n_data, n_log, d, d),    
-                            plaquettes,
-                            plaquettes,
-                            operators,
-                            operators);
-    fi;
+    WriteCodeToFile(CodeFilename(code_folder, n_data, n_log),    
+                        plaquettes,
+                        plaquettes,
+                        operators,
+                        operators);
 
     i := i+1;
 od;

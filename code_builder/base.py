@@ -53,6 +53,18 @@ def get_support(gr: nx.Graph, check: int) -> list[int]:
 def add_observable(gr: nx.Graph, observable: list[int], obs_type: str) -> None:
     gr.graph['obs_list'][obs_type].append(observable)
 
+def make_check_graph(gr: nx.Graph, check_type: str) -> nx.Graph:
+    cgr = nx.Graph()
+    for x in gr.graph['checks'][check_type]:
+        for y in gr.graph['checks'][check_type]:
+            if x == y:
+                continue
+            if cgr.has_edge(x, y):
+                continue
+            if len(list(nx.common_neighbors(gr, x, y))) > 0:
+                cgr.add_edge(x, y)
+    return cgr
+
 # Specific Code Functions:
 
 def add_plaquette(gr: nx.Graph, plaquette: int, support: list[int], color: int) -> None:
