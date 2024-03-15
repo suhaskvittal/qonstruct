@@ -9,8 +9,6 @@
 #   max_index -- max index of normal subgroup
 #
 
-max_index := 1000;
-
 # Get functions.
 Read("gap/utils/qec.gi");
 Read("gap/utils/operations.gi");
@@ -35,10 +33,17 @@ IO_mkdir(code_folder, 448);
 
 # Iterate through subgroups.
 i := 1;
+visited := [];
 while i <= Length(lins) do
     n_data := Index(lins[i]); # This is the number of qubits.
 
+    if Index(lins[i]) in visited then
+        i := i+1;
+        continue;
+    fi;
     Print("Index: ", Index(lins[i]), "\n");
+    AddSet(visited, Index(lins[i]));
+
     H := Grp(lins[i]);
 
     G_mod_H := G / H;

@@ -8,8 +8,6 @@
 #   r and s -- the Schlaffi symbols for the surface.
 #   max_index -- max index of normal subgroup
 
-max_index := 2000;
-
 # Get functions.
 Read("gap/utils/qec.gi");
 Read("gap/utils/operations.gi");
