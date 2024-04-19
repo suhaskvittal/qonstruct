@@ -14,7 +14,6 @@ Read("gap/utils/operations.gi");
 Read("gap/codes/hyperbolic/base.gi");
 
 LoadPackage("LINS");
-LoadPackage("fr");
 
 # Compute normal subgroups.
 
