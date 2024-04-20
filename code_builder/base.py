@@ -42,11 +42,6 @@ def add_check(gr: nx.Graph, check: int, check_type: str, support: list[int], **k
             add_data_qubit(gr, q)
         gr.add_edge(check, q)
 
-def add_to_support(gr: nx.Graph, check: int, q: int) -> None:
-    n = gr.graph['_check_to_index'][check]
-    x = gr.graph['_data_to_index'][q]
-    gr.add_edge(n, x)
-
 def get_support(gr: nx.Graph, check: int) -> list[int]:
     return [x for x in gr.neighbors(check)]
 

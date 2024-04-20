@@ -1,2 +1,0 @@
-# Author: Suhas Vittal
-

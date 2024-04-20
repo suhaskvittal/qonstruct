@@ -6,8 +6,32 @@
 """
 
 from qonstruct.code_builder.base import *
+from qonstruct.utils import *
 
 import networkx as nx
+
+from itertools import permutations
+
+def color_tanner_graph(gr: nx.Graph):
+    xsgr = make_support_graph(gr, 'x')
+    xcm = nx.coloring.greedy_color(xsgr, strategy='connected_sequential_bfs')
+    max_color = max(x for (_, x) in xcm.items())
+    print(f'computed {max_color+1}-coloring')
+    # Identify plaquettes and colors.
+    for (plaq, (xch, c)) in enumerate(xcm.items()):
+        # Find Z checks with same support as xch.
+        xsupp = [x for x in gr.neighbors(xch)]
+        for zch in gr.neighbors(xsupp[0]):
+            if gr.nodes[zch]['node_type'] != 'z':
+                continue
+            zsupp = [x for x in gr.neighbors(zch)]
+            if xsupp == zsupp:
+                add_plaquette(gr, plaq, xsupp, c)
+                for ch in [xch, zch]:
+                    gr.nodes[ch]['color'] = c
+                    gr.nodes[ch]['plaquette'] = plaq
+                    set_plaquette(gr, ch, plaq)
+                break
 
 def make_hexagonal(d: int, both_at_once=True) -> nx.Graph:
     """
@@ -70,67 +94,104 @@ def make_hexagonal(d: int, both_at_once=True) -> nx.Graph:
         plaq += 1
     return gr
 
-def make_hycc_d4(both_at_once=True) -> nx.Graph:
-    gr = tanner_init()
+def make_semihyperbolic(gr: nx.Graph, period: list[int]) -> nx.Graph:
+    ngr = tanner_init()
+    # Input gr should be a hyperbolic color code.
+    n = len(gr.graph['data_qubits'])
+    for x in gr.graph['data_qubits']:
+        add_data_qubit(ngr, x)
+    # Track replacements in the semihyperbolic code.
+    replaced = {}
+    not_replaced = set()
+    # Go through each check and try to replace a qubit with Steane's code.
+    plaquettes = []
+    
+    def compute_cycle(supp):
+        if len(supp) > 10:
+            return supp
+        # Adjacent qubits should have two plaquettes in common.
+        comm_map = {}
+        for (i, x) in enumerate(supp):
+            for (j, y) in enumerate(supp):
+                if i >= j:
+                    continue
+                comm = len(list(nx.common_neighbors(gr, x, y)))
+                comm_map[(x,y)] = comm
+                comm_map[(y,x)] = comm
+        for cyc in permutations(supp):
+            is_valid = True
+            # Check if the cycle is good.
+            for (i, q) in enumerate(cyc):
+                _q = cyc[i-1]
+                # Count boundaries as well.
+                comm = comm_map[(q,_q)]
+                bboth_have = [True, True, True]
+                for x in gr.neighbors(q):
+                    bboth_have[gr.nodes[x]['color']] = False
+                for x in gr.neighbors(_q):
+                    bboth_have[gr.nodes[x]['color']] = False
+                comm += 2*sum(bboth_have)
+                if comm < 4:
+                    is_valid = False
+                    break
+            if is_valid:
+                return cyc
+        exit(1)
+    # First, identify the qubits we are expanding.
+    plaq_to_cycle = {}
+    for (_plaq, supp) in gr.graph['plaquette_support_map'].items():
+        c = gr.graph['plaquette_color_map'][_plaq]
+        cyc = compute_cycle(supp)
+        plaq_to_cycle[_plaq] = cyc
+        for i in range(0, len(cyc), period[c]):
+            q = cyc[i]
+            if q in replaced:
+                continue
+            new_q = list(range(n, n+6))
+            qa,qb,qc,qd,qe,qf = new_q[:]
+            for _q in new_q:
+                add_data_qubit(ngr, _q)
+            new_q.append(q)
+            n += 6
+            replaced[q] = new_q
+            # Add checks for Steane's code. q is in all checks (it is the central qubit).
+            for (_c, steane_supp) in enumerate([[qa, qb, qd, q], [qb, qc, q, qe], [qd, q, qe, qf]]):
+                plaquettes.append((_c, steane_supp))
+    # Now make the checks
+    for (_plaq, cyc) in plaq_to_cycle.items():
+        c = gr.graph['plaquette_color_map'][_plaq]
+        # Find first qubit that has already been replaced.
+        print('Expanding plaquette', cyc)
+        big_supp = [] # Overall support after adding Steane's code.
+        for q in cyc:
+            if q in replaced:
+                if c == 0:
+                    qa,qb,qc = replaced[q][2], replaced[q][4], replaced[q][5]
+                elif c == 1:
+                    qa,qb,qc = replaced[q][0], replaced[q][3], replaced[q][5]
+                else:
+                    qa,qb,qc = replaced[q][0], replaced[q][1], replaced[q][2]
+                big_supp.extend([qa,qb,qc])
+            else:
+                big_supp.append(q)
+        plaquettes.append((c, big_supp))
+        print(f'Check weight: {len(cyc)} --> {len(big_supp)}')
+    # Add plaquettes and checks to ngr.
+    for (plaq, (c, supp)) in enumerate(plaquettes):
+        add_plaquette(ngr, plaq, supp, c)
+        for typ in ['x', 'z']:
+            add_check(ngr, n, typ, supp, color=c, plaquette=plaq)
+            set_plaquette(ngr, n, plaq)
+            n += 1
+    # Update observables.
+    for typ in ['x', 'z']:
+        for obs in gr.graph['obs_list'][typ]:
+            new_obs = []
+            for q in obs:
+                if q in replaced:
+                    new_obs.extend(replaced[q])
+                else:
+                    new_obs.append(q)
+            add_observable(ngr, new_obs, typ)
+    return ngr
 
-    red_operators = [
-        [0, 1, 2, 3, 4, 5],
-        [6, 7, 8, 9, 10, 11],
-        [12, 13, 14, 15, 16, 17],
-        [18, 19, 20, 21, 22, 23]
-    ]
-
-    blue_operators = [
-        [2, 4, 8, 10, 21, 19, 13, 15],
-        [18, 20, 14, 12, 3, 5, 9, 11],
-#       [0, 1, 16, 17, 22, 23, 6, 7]
-    ]
-
-    green_operators = [
-        [0, 2, 6, 8, 23, 21, 15, 17],
-        [20, 22, 14, 16, 3, 1, 7, 9],
-#       [4, 5, 12, 13, 19, 18, 10, 11]
-    ]
-
-    z_obs_list = [
-        [11, 10, 4, 5],
-        [4, 5, 12, 13],
-        [7, 6, 0, 1],
-        [0, 1, 16, 17],
-        [9, 11, 18, 20],
-        [8, 10, 4, 2],
-        [22, 20, 9, 7],
-        [6, 8, 2, 0]
-    ]
-
-    x_obs_list = [
-        [11, 10, 4, 5],
-        [4, 5, 12, 13],
-        [7, 6, 0, 1],
-        [0, 1, 16, 17],
-        [9, 11, 18, 20],
-        [8, 10, 4, 2],
-        [22, 20, 9, 7],
-        [6, 8, 2, 0]
-    ]
-    # Add all data qubits to the graph.
-    for i in range(24):
-        add_data_qubit(gr, i)
-    # Add observables:
-    for i in range(8):
-        add_observable(gr, x_obs_list[i], 'x')
-        add_observable(gr, z_obs_list[i], 'z')
-    # Create checks:
-    n, plaq = 24, 0
-    for (c, check_list) in enumerate([red_operators, green_operators, blue_operators]):
-        for support in check_list:
-            add_plaquette(gr, plaq, support, c)
-            for stabilizer in ['x', 'z']:
-                add_check(gr, n, stabilizer, support, color=c, plaquette=plaq, schedule_order=[])
-                set_plaquette(gr, n, plaq)
-                n += 1
-            plaq += 1
-    # Now, we must determine the schedules. We will do so algorithmically.
-    from qonstruct.scheduling import compute_syndrome_extraction_schedule
-    compute_syndrome_extraction_schedule(gr)
-    return gr
