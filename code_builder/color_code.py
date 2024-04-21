@@ -11,10 +11,11 @@ from qonstruct.utils import *
 import networkx as nx
 
 from itertools import permutations
+from collections import deque
 
 def color_tanner_graph(gr: nx.Graph):
     xsgr = make_support_graph(gr, 'x')
-    xcm = nx.coloring.greedy_color(xsgr, strategy='connected_sequential_bfs')
+    xcm = nx.coloring.greedy_color(xsgr, strategy='DSATUR')
     max_color = max(x for (_, x) in xcm.items())
     print(f'computed {max_color+1}-coloring')
     # Identify plaquettes and colors.
@@ -94,7 +95,7 @@ def make_hexagonal(d: int, both_at_once=True) -> nx.Graph:
         plaq += 1
     return gr
 
-def make_semihyperbolic(gr: nx.Graph, period: list[int]) -> nx.Graph:
+def make_semihyperbolic(gr: nx.Graph, period: int) -> nx.Graph:
     ngr = tanner_init()
     # Input gr should be a hyperbolic color code.
     n = len(gr.graph['data_qubits'])
@@ -106,62 +107,66 @@ def make_semihyperbolic(gr: nx.Graph, period: list[int]) -> nx.Graph:
     # Go through each check and try to replace a qubit with Steane's code.
     plaquettes = []
     
-    def compute_cycle(supp):
-        if len(supp) > 10:
-            return supp
-        # Adjacent qubits should have two plaquettes in common.
-        comm_map = {}
-        for (i, x) in enumerate(supp):
-            for (j, y) in enumerate(supp):
-                if i >= j:
+    def get_qubits_sharing_an_edge(q):
+        adj = []
+        visited = set()
+        for tmp in gr.neighbors(q):
+            for _q in gr.neighbors(tmp):
+                if _q in visited or q == _q:
                     continue
-                comm = len(list(nx.common_neighbors(gr, x, y)))
-                comm_map[(x,y)] = comm
-                comm_map[(y,x)] = comm
-        for cyc in permutations(supp):
-            is_valid = True
-            # Check if the cycle is good.
-            for (i, q) in enumerate(cyc):
-                _q = cyc[i-1]
-                # Count boundaries as well.
-                comm = comm_map[(q,_q)]
+                comm = len(list(nx.common_neighbors(gr, q, _q)))
                 bboth_have = [True, True, True]
                 for x in gr.neighbors(q):
                     bboth_have[gr.nodes[x]['color']] = False
                 for x in gr.neighbors(_q):
                     bboth_have[gr.nodes[x]['color']] = False
                 comm += 2*sum(bboth_have)
-                if comm < 4:
-                    is_valid = False
-                    break
-            if is_valid:
-                return cyc
-        exit(1)
+                if comm == 4:
+                    adj.append(_q)
+                visited.add(_q)
+        return adj
+    
     # First, identify the qubits we are expanding.
-    plaq_to_cycle = {}
-    for (_plaq, supp) in gr.graph['plaquette_support_map'].items():
-        c = gr.graph['plaquette_color_map'][_plaq]
-        cyc = compute_cycle(supp)
-        plaq_to_cycle[_plaq] = cyc
-        for i in range(0, len(cyc), period[c]):
-            q = cyc[i]
-            if q in replaced:
-                continue
-            new_q = list(range(n, n+6))
-            qa,qb,qc,qd,qe,qf = new_q[:]
-            for _q in new_q:
-                add_data_qubit(ngr, _q)
-            new_q.append(q)
-            n += 6
-            replaced[q] = new_q
-            # Add checks for Steane's code. q is in all checks (it is the central qubit).
-            for (_c, steane_supp) in enumerate([[qa, qb, qd, q], [qb, qc, q, qe], [qd, q, qe, qf]]):
-                plaquettes.append((_c, steane_supp))
+    ctr_map = {0: 0}
+    visited = set()
+    bfs = deque([0])
+    while len(bfs):
+        q = bfs.popleft()
+        if q in visited:
+            continue
+        # Check if any neighbors of q have been replaced.
+        for _q in get_qubits_sharing_an_edge(q):
+            bfs.append(_q)
+            if _q not in ctr_map:
+                if ctr_map[q] == 0:
+                    ctr_map[_q] = period-1
+                else:
+                    ctr_map[_q] = ctr_map[q]-1
+            else:
+                if ctr_map[q] == 0:
+                    ctr_map[_q] = min(ctr_map[_q], period-1)
+                else:
+                    ctr_map[_q] = min(ctr_map[_q], ctr_map[q]-1)
+                print(f'{q} --> {_q}: ctr = {ctr_map[q]} --> {ctr_map[_q]}')
+        visited.add(q)
+        # Check if we should replace q with a Steane's code.
+        if ctr_map[q] > 0:
+            continue
+        print('Replacing qubit', q)
+        new_q = list(range(n, n+6))
+        qa,qb,qc,qd,qe,qf = new_q[:]
+        for _q in new_q:
+            add_data_qubit(ngr, _q)
+        new_q.append(q)
+        n += 6
+        replaced[q] = new_q
+        # Add checks for Steane's code. q is in all checks (it is the central qubit).
+        for (c, steane_supp) in enumerate([[qa, qb, qd, q], [qb, qc, q, qe], [qd, q, qe, qf]]):
+            plaquettes.append((c, steane_supp))
     # Now make the checks
-    for (_plaq, cyc) in plaq_to_cycle.items():
+    for (_plaq, cyc) in gr.graph['plaquette_support_map'].items():
         c = gr.graph['plaquette_color_map'][_plaq]
         # Find first qubit that has already been replaced.
-        print('Expanding plaquette', cyc)
         big_supp = [] # Overall support after adding Steane's code.
         for q in cyc:
             if q in replaced:
@@ -175,7 +180,6 @@ def make_semihyperbolic(gr: nx.Graph, period: list[int]) -> nx.Graph:
             else:
                 big_supp.append(q)
         plaquettes.append((c, big_supp))
-        print(f'Check weight: {len(cyc)} --> {len(big_supp)}')
     # Add plaquettes and checks to ngr.
     for (plaq, (c, supp)) in enumerate(plaquettes):
         add_plaquette(ngr, plaq, supp, c)
