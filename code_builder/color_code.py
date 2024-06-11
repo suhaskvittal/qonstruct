@@ -34,6 +34,24 @@ def color_tanner_graph(gr: nx.Graph):
                     set_plaquette(gr, ch, plaq)
                 break
 
+def color_code_from_faces(face_file: str) -> nx.Graph:
+    gr = tanner_init()
+    with open(face_file, 'r') as reader:
+        lines = reader.readlines()
+    faces = []
+    n = 0
+    for ln in lines:
+        supp = [int(q) for q in ln.split(',') ]
+        faces.append(supp)
+        n = max(n, max(supp))
+    n += 1
+    for f in faces:
+        for t in ['x','z']:
+            add_check(gr, n, t, f)
+            n += 1
+    color_tanner_graph(gr)
+    return gr
+    
 def make_hexagonal(d: int, both_at_once=True) -> nx.Graph:
     """
         This function will return a tanner graph for a hexagonal color
@@ -94,187 +112,4 @@ def make_hexagonal(d: int, both_at_once=True) -> nx.Graph:
             n += 1
         plaq += 1
     return gr
-
-def make_semihyperbolic(gr: nx.Graph, seed: str) -> nx.Graph:
-    """
-        Constructs a semihyperbolic color code using a hyperbolic color code
-        and a seed planar code.
-    """
-    ngr = tanner_init()
-    # Input gr should be a hyperbolic color code.
-    n = len(gr.graph['data_qubits'])
-    for x in gr.graph['data_qubits']:
-        add_data_qubit(ngr, x)
-    # Track replacements in the semihyperbolic code.
-    replaced = {}
-    # Go through each check and try to replace a qubit with Steane's code.
-    plaquettes = []
-    def get_qubits_sharing_an_edge(q):
-        adj = []
-        visited = set()
-        for tmp in gr.neighbors(q):
-            for _q in gr.neighbors(tmp):
-                if _q in visited or q == _q:
-                    continue
-                comm = len(list(nx.common_neighbors(gr, q, _q)))
-                bboth_have = [True, True, True]
-                for x in gr.neighbors(q):
-                    bboth_have[gr.nodes[x]['color']] = False
-                for x in gr.neighbors(_q):
-                    bboth_have[gr.nodes[x]['color']] = False
-                comm += 2*sum(bboth_have)
-                if comm == 4:
-                    # Identify edge color between q and _q.
-                    colors = { gr.nodes[x]['color'] for x in nx.common_neighbors(gr, q, _q) }
-                    for (i,b) in enumerate(bboth_have):
-                        if b:
-                            colors.add(i)
-                    if 0 not in colors:
-                        c = 0
-                    elif 1 not in colors:
-                        c = 1
-                    else:
-                        c = 2
-                    adj.append((c, _q))
-                visited.add(_q)
-        return adj
     
-    # First, identify the qubits we are expanding.
-    code_grp_map = {}
-
-    visited = set()
-    code_grp = 0
-    for q in gr.graph['data_qubits']:
-        if q in visited:
-            continue
-        if seed == '7_1_3':
-            n = rf_7_1_3(ngr, n, q, replaced)
-        elif seed == '12_2_3':
-            # Find pair for q.
-            qadj = get_qubits_sharing_an_edge(q)
-            for (c,_q) in qadj:
-                if _q in visited:
-                    continue
-                n = rf_12_2_3(ngr, n, q, _q, c, replaced)
-                visited.add(_q)
-                code_grp_map[_q] = code_grp
-                break
-        elif seed == '4_2_2':
-            n = rf_4_2_2(ngr, n, q, replaced)
-        print(q, '-->', replaced[q]['bulk'])
-
-        visited.add(q)
-        plaquettes.extend(replaced[q]['plaquettes'])
-        code_grp_map[q] = code_grp
-        code_grp += 1
-
-    # Now make the checks
-    for (_plaq, cyc) in gr.graph['plaquette_support_map'].items():
-        c = gr.graph['plaquette_color_map'][_plaq]
-        # Find first qubit that has already been replaced.
-        big_supp = [] # Overall support after adding Steane's code.
-        visited = set()
-        for q in cyc:
-            if q in code_grp_map and code_grp_map[q] in visited:
-                continue
-            if q in replaced:
-                big_supp.extend(replaced[q]['border'][c])
-                visited.add(code_grp_map[q])
-            else:
-                big_supp.append(q)
-        plaquettes.append((c, big_supp))
-        print(_plaq, cyc, big_supp, len(cyc), len(big_supp))
-    # Add plaquettes and checks to ngr.
-    for (plaq, (c, supp)) in enumerate(plaquettes):
-        add_plaquette(ngr, plaq, supp, c)
-        for typ in ['x', 'z']:
-            add_check(ngr, n, typ, supp, color=c, plaquette=plaq)
-            set_plaquette(ngr, n, plaq)
-            n += 1
-        for (_, _supp) in plaquettes:
-            comm = [x for x in supp if x in _supp]
-            if len(comm) % 2 == 1:
-                print('Anticommutation:', supp, _supp, comm)
-    # Update observables.
-    for typ in ['x', 'z']:
-        for obs in gr.graph['obs_list'][typ]:
-            new_obs = []
-            for q in obs:
-                if q in replaced:
-                    new_obs.extend(replaced[q]['bulk'])
-                else:
-                    new_obs.append(q)
-            add_observable(ngr, new_obs, typ)
-    return ngr
-
-# Replacement function for Steane's code -- [[7, 1, 3]]
-# Returns new "n"
-def rf_7_1_3(ngr: nx.Graph, n: int, q: int, replaced: dict[int, dict]) -> int:
-    qlist = list(range(n, n+6))
-    a, b, c, d, e, f = qlist[:]
-    for _q in qlist:
-        add_data_qubit(ngr, _q)
-    qlist.append(q)
-    
-    plaquettes = [(0, [a, b, d, q]), (1, [b, c, q, e]), (2, [d, q, e, f])]
-    replaced[q] = {
-        'bulk': qlist,
-        'plaquettes': plaquettes,
-        'border': {
-            0: [c, e, f], 1: [a, d, f], 2: [a, b, c]
-        }
-    }
-    return n+6
-
-def rf_12_2_3(ngr: nx.Graph, n: int, q1: int, q2: int, merge_along_color: int, replaced: dict[int, dict]) -> int:
-    qlist = list(range(n, n+10))
-    a,b,c,d,e,\
-            f,g,h,i,j = qlist[:]
-    for _q in qlist:
-        add_data_qubit(ngr, _q)
-    qlist.extend([q1, q2])
-
-    plaquettes = [
-        (1, [e,q1,f,i]),
-        (1, [g,q2,h,j]),
-        (2, [a,b,e,q1]),
-        (2, [c,d,q2,h]),
-        (0, [b,c,q1,f,g,q2])
-    ]
-    # Update colors of plaquettes for merge.
-    plaquettes = [ ( (c+merge_along_color % 3), p ) for (c,p) in plaquettes ]
-
-    b0_1 = [a,e,i]
-    b0_2 = [d,h,j]
-    b1 = [a,b,c,d]
-    b2 = [f,g,i,j]
-    bord_q1 = {0: b0_1, 1: b1, 2: b2}
-    bord_q2 = {0: b0_2, 1: b1, 2: b2}
-    # Update border colors
-    bord_q1 = { ((c+merge_along_color) % 3):b for (c,b) in bord_q1.items() }
-    bord_q2 = { ((c+merge_along_color) % 3):b for (c,b) in bord_q2.items() }
-    replaced[q1] = {
-        'bulk': [a,b,e,f,i,q1],
-        'plaquettes': plaquettes,
-        'border': bord_q1
-    }
-    replaced[q2] = {
-        'bulk': [c,d,g,h,j,q2],
-        'plaquettes': plaquettes,
-        'border': bord_q2
-    }
-    return n+10
-
-def rf_4_2_2(ngr: nx.Graph, n: int, q: int, replaced: dict[int, dict]) -> int:
-    a, b, c = n, n+1, n+2
-    qlist = [a,b,c]
-    for _q in qlist:
-        add_data_qubit(ngr, _q)
-    qlist.append(q)
-
-    replaced[q] = {
-        'bulk': qlist,
-        'plaquettes': [(3, [a,b,c,q])],
-        'border': {0: [a,b], 1: [a,c], 2: [b,c]}
-    }
-    return n+3

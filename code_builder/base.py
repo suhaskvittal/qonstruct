@@ -70,6 +70,7 @@ def add_plaquette(gr: nx.Graph, plaquette: int, support: list[int], color: int) 
 def set_plaquette(gr: nx.Graph, check: int, plaquette: int) -> None:
     if plaquette not in gr.graph['plaquettes']:
         add_plaquette(gr, plaquette)
+    gr.nodes[check]['plaquette'] = plaquette
     gr.graph['plaquette_check_map'][plaquette].append(check)
 
 def get_plaquette(gr: nx.Graph, check: int) -> int:
