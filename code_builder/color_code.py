@@ -6,18 +6,15 @@
 """
 
 from qonstruct.code_builder.base import *
-from qonstruct.utils import *
+from qonstruct.utils import make_support_graph
 
 import networkx as nx
-
-from itertools import permutations
-from collections import deque
 
 def color_tanner_graph(gr: nx.Graph):
     xsgr = make_support_graph(gr, 'x')
     xcm = nx.coloring.greedy_color(xsgr, strategy='DSATUR')
     max_color = max(x for (_, x) in xcm.items())
-    print(f'computed {max_color+1}-coloring')
+    #print(f'computed {max_color+1}-coloring')
     # Identify plaquettes and colors.
     for (plaq, (xch, c)) in enumerate(xcm.items()):
         # Find Z checks with same support as xch.
@@ -33,24 +30,6 @@ def color_tanner_graph(gr: nx.Graph):
                     gr.nodes[ch]['plaquette'] = plaq
                     set_plaquette(gr, ch, plaq)
                 break
-
-def color_code_from_faces(face_file: str) -> nx.Graph:
-    gr = tanner_init()
-    with open(face_file, 'r') as reader:
-        lines = reader.readlines()
-    faces = []
-    n = 0
-    for ln in lines:
-        supp = [int(q) for q in ln.split(',') ]
-        faces.append(supp)
-        n = max(n, max(supp))
-    n += 1
-    for f in faces:
-        for t in ['x','z']:
-            add_check(gr, n, t, f)
-            n += 1
-    color_tanner_graph(gr)
-    return gr
     
 def make_hexagonal(d: int, both_at_once=True) -> nx.Graph:
     """
@@ -112,4 +91,3 @@ def make_hexagonal(d: int, both_at_once=True) -> nx.Graph:
             n += 1
         plaq += 1
     return gr
-    
